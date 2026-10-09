@@ -26,6 +26,7 @@ ADDRESS = 'Rua 2, Quadra A-37, Nº 651. Jardim Goiás – Goiânia - GO. CEP: 74
 WEBSITE = 'www.equatorialenergia.com.br'
 PHOTO_WIDTH_CM = 14.5
 PHOTO_HEIGHT_CM = 6
+SIGNATURE_GAP_CM = 2.5
 POINTS_PER_CM = 72 / 2.54
 FONT_DIR = Path(__file__).parent / 'assets' / 'fonts'
 PDF_FONT = 'LiberationSerif'
@@ -91,7 +92,7 @@ def generate_pdf(data):
         photo = PDFImage(BytesIO(point['photo']), width=w, height=h)
         story.append(KeepTogether([photo, Spacer(1, 3), Paragraph(escape(legend), caption)]))
     signature_style = ParagraphStyle('signature', parent=styles['center'], fontSize=10, leading=15, spaceAfter=0)
-    signature = [Paragraph('Atenciosamente,', styles['left']), Spacer(1, 20), HRFlowable(width='85%', thickness=0.6, color='#555555', spaceAfter=4)]
+    signature = [Paragraph('Atenciosamente,', styles['left']), Spacer(1, SIGNATURE_GAP_CM * POINTS_PER_CM), HRFlowable(width='85%', thickness=0.6, color='#555555', spaceAfter=4)]
     signature.extend(Paragraph(markup([(line, True)]), signature_style) for line in signature_lines(data))
     story.append(KeepTogether(signature))
 
@@ -164,7 +165,7 @@ def generate_docx(data):
         p.runs[0].font.size = Pt(9)
     p = doc.add_paragraph('Atenciosamente,')
     p.paragraph_format.keep_with_next = True
-    p.paragraph_format.space_after = Pt(26)
+    p.paragraph_format.space_after = Pt(6 + SIGNATURE_GAP_CM * POINTS_PER_CM)
     lines = signature_lines(data)
     for index, line in enumerate(lines):
         p = doc.add_paragraph()
