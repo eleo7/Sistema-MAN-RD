@@ -49,9 +49,7 @@ def content(data):
     if len(data['points']) == 1:
         blocks.append(('justify', [(body, False), (data['excerpt'], True), (' na seguinte localização: ', False), (data['points'][0]['location'], True), ('.', False)]))
     else:
-        blocks.append(('justify', [(body, False), (data['excerpt'], True), (' nas seguintes localizações:', False)]))
-        for i, point in enumerate(data['points'], 1):
-            blocks.append(('left', [(f'Ponto {i} — ', True), (point['location'], False)]))
+        blocks.append(('justify', [(body, False), (data['excerpt'], True), (' nas localizações indicadas abaixo.', False)]))
     if data['clients']:
         blocks.append(('justify', [('Ressalta-se que a presente intervenção beneficiará diretamente uma quantidade média de ', False), (data['clients'], True), (' clientes da região, mitigando o risco iminente de descontinuidade no fornecimento de energia elétrica.', False)]))
     blocks.append(('left', [(EVIDENCE, False)]))

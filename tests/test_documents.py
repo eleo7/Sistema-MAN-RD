@@ -198,9 +198,11 @@ def test_updated_signature_and_locations(client, count):
         assert 'CREA: Nº 17219/D-GO' in normalized
         assert 'COORDENADOR DE MEIO AMBIENTE E RESPONSÁVEL TÉCNICO' in normalized
         if count > 1:
-            assert 'nas seguintes localizações:' in normalized
-            assert 'Ponto 1 — Rua 1' in normalized
-            assert 'Ponto 2 — Rua 2' in normalized
+            assert 'nas localizações indicadas abaixo.' in normalized
+            assert 'Ponto 1 — Localização: Rua 1' in normalized
+            assert normalized.count('Rua 1, Jardim Goiás, Goiânia') == 1
+            assert 'Ponto 2 — Localização: Rua 2' in normalized
+            assert normalized.count('Rua 2, Jardim Goiás, Goiânia') == 1
         else:
             assert 'na seguinte localização:' in normalized
     signature = next(p for p in word.paragraphs if p.text == 'THIAGO DUTRA SILVA')
