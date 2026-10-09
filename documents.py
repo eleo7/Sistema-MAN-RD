@@ -59,7 +59,7 @@ def content(data):
 
 
 def signature_lines(data):
-    return [data['signer'], data['qualification'], data['registration'], data['role']]
+    return [line for line in [data['signer'], data['qualification'], data['registration'], data['role']] if line.strip()]
 
 
 def labels(index, count):

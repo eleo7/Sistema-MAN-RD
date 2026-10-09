@@ -18,6 +18,8 @@ def picture(color='green'):
 
 def payload(count=1, output='pdf'):
     data = dict(number='042/2026', date='2026-10-09', city='Goiânia', clients='150', signer='Cesar Augusto Guarilha', role='Gerente de Manutenção e Automação RD Centro', model='palmeira', format=output, point_id=[f'p{i}' for i in range(count)], logo=(picture('blue'), 'logo.png'))
+    data['qualification'] = 'ENGENHEIRO AGRÔNOMO E TECNÓL. EM GEOPROCESSAMENTO'
+    data['registration'] = 'CREA: Nº 17219/D-GO'
     for i in range(count):
         data[f'location_p{i}'] = f'Rua {i + 1}, Jardim Goiás, Goiânia'
         data[f'photo_p{i}'] = (picture(), 'evidencia.png')
@@ -205,3 +207,26 @@ def test_updated_signature_and_locations(client, count):
     assert 'w:pBdr' in signature._p.xml
     assert signature.runs[0].bold
     assert signature.paragraph_format.keep_with_next
+
+
+@pytest.mark.parametrize('omit', [False, True])
+def test_optional_signature_fields(client, omit):
+    data = payload(output='zip')
+    for name in ['qualification', 'registration']:
+        if omit:
+            del data[name]
+        else:
+            data[name] = '   '
+    response = client.post('/generate', data=data)
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.data)) as archive:
+        word = Document(BytesIO(archive.read('oficio-amma.docx')))
+        pdf = PdfReader(BytesIO(archive.read('oficio-amma.pdf')))
+    paragraphs = [p.text for p in word.paragraphs]
+    start = paragraphs.index('Atenciosamente,')
+    assert paragraphs[start + 1:] == [data['signer'], data['role']]
+    text = '\n'.join(p.extract_text() for p in pdf.pages)
+    assert data['signer'] in text
+    assert data['role'] in text
+    assert 'CREA:' not in text
+    assert 'ENGENHEIRO AGRÔNOMO' not in text
