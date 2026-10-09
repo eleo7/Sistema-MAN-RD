@@ -55,8 +55,8 @@ addButton.addEventListener('click', () => addPoint()?.focus());
 addPoint();
 document.querySelector('#model').addEventListener('change', (event) => {
   document.querySelector('#model-note').textContent = event.target.value === 'palmeira'
-    ? 'Solicitação de extirpação de uma Palmeira Imperial.'
-    : 'Extirpação de Árvore: com risco de queda ou contato com rede elétrica de distribuição.';
+    ? 'Solicitação de supressão de uma Palmeira Imperial.'
+    : 'Supressão de Árvore: com risco de queda ou contato com rede elétrica de distribuição.';
 });
 function showFeedback(messages, success = false) {
   feedback.replaceChildren();

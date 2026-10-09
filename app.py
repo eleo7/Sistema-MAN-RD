@@ -16,8 +16,8 @@ ROOT = Path(__file__).parent
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 45 * 1024 * 1024
 MODELS = {
-    'palmeira': 'extirpação de uma Palmeira Imperial',
-    'arvore': 'Extirpação de Árvore: com risco de queda ou contato com rede elétrica de distribuição',
+    'palmeira': 'supressão de uma Palmeira Imperial',
+    'arvore': 'Supressão de Árvore: com risco de queda ou contato com rede elétrica de distribuição',
 }
 MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 

@@ -95,7 +95,7 @@ def test_optional_fields_and_tree_model(client):
     response = client.post('/generate', data=data)
     assert response.status_code == 200
     text = '\n'.join(p.text for p in Document(BytesIO(response.data)).paragraphs)
-    assert 'Extirpação de Árvore: com risco de queda ou contato com rede elétrica de distribuição' in text
+    assert 'Supressão de Árvore: com risco de queda ou contato com rede elétrica de distribuição' in text
     assert 'Ressalta-se' not in text
     assert 'Ofício nº' not in text
 
