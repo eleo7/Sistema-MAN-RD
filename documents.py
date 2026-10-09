@@ -16,7 +16,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PDFImage, KeepTogether
 
-RECIPIENT = 'Exma. Sra. Dra. Zilma Percussor Presidente da Agência Municipal do Meio Ambiente'
+RECIPIENT = 'Exma. Sra. Dra. Zilma Percussor'
+RECIPIENT_ROLE = 'Presidente da Agência Municipal do Meio Ambiente'
 SALUTATION = 'Exma. Sra. Presidente,'
 EVIDENCE = 'Abaixo segue as informações de localização e evidências fotográficas.'
 COMPANY = 'EQUATORIAL ENERGIA GOIÁS'
@@ -42,7 +43,7 @@ def content(data):
         blocks.append(('left', [('Ofício nº ' + data['number'], True)]))
     blocks.extend([
         ('right', [(data['date_text'], False)]),
-        ('left', [(RECIPIENT, False)]),
+        ('recipient', [(RECIPIENT, True), ('\n' + RECIPIENT_ROLE, False)]),
         ('left', [(SALUTATION, False)]),
         ('justify', [(body, False), (data['excerpt'], True), (' que está localizada ', False), (location, True), ('.', False)]),
     ])
@@ -68,6 +69,7 @@ def generate_pdf(data):
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=57, rightMargin=57, topMargin=76, bottomMargin=65, title='Ofício AMMA', author=data['signer'])
     base = ParagraphStyle('body', fontName=PDF_FONT, fontSize=11, leading=16.5, spaceAfter=6, splitLongWords=True)
     styles = {name: ParagraphStyle(name, parent=base, alignment=align) for name, align in [('left', 0), ('right', TA_RIGHT), ('justify', TA_JUSTIFY), ('center', TA_CENTER)]}
+    styles['recipient'] = ParagraphStyle('recipient', parent=styles['left'], spaceAfter=16.5, keepWithNext=True)
     caption = ParagraphStyle('caption', parent=styles['center'], fontSize=9, leading=13.5, spaceAfter=7)
     def markup(runs):
         return ''.join(f'<b>{escape(text)}</b>' if bold else escape(text) for text, bold in runs).replace('\n', '<br/>')
@@ -123,7 +125,11 @@ def generate_docx(data):
     alignments = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'right': WD_ALIGN_PARAGRAPH.RIGHT, 'justify': WD_ALIGN_PARAGRAPH.JUSTIFY}
     for align, runs in content(data):
         p = doc.add_paragraph()
-        p.alignment = alignments[align]
+        p.alignment = alignments.get(align, WD_ALIGN_PARAGRAPH.LEFT)
+        if align == 'recipient':
+            p.paragraph_format.space_after = Pt(16.5)
+            p.paragraph_format.keep_with_next = True
+            p.paragraph_format.keep_together = True
         for text, bold in runs:
             p.add_run(text).bold = bold
     for i, point in enumerate(data['points'], 1):
