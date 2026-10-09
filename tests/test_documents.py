@@ -154,3 +154,22 @@ def test_missing_logo(client, monkeypatch, tmp_path):
     response = client.post('/generate', data=data)
     assert response.status_code == 422
     assert any(e.startswith('Logo:') for e in response.json['errors'])
+
+
+def test_project_logo_is_automatic(client, monkeypatch, tmp_path):
+    import app as app_module
+    monkeypatch.setattr(app_module, 'ROOT', tmp_path)
+    (tmp_path / 'assets').mkdir()
+    (tmp_path / 'assets' / 'logo.png').write_bytes(picture('blue').getvalue())
+    page = client.get('/').text
+    assert 'Logo oficial configurado.' in page
+    assert 'name="logo"' not in page
+    data = payload(output='zip')
+    del data['logo']
+    response = client.post('/generate', data=data)
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.data)) as archive:
+        pdf = PdfReader(BytesIO(archive.read('oficio-amma.pdf')))
+        assert len(pdf.pages[0].images) == 2
+        word = Document(BytesIO(archive.read('oficio-amma.docx')))
+        assert 'graphic' in word.sections[0].header._element.xml

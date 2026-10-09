@@ -99,7 +99,7 @@ def read_data():
     upload = request.files.get('logo')
     local_logo = ROOT / 'assets' / 'logo.png'
     data['logo'] = None
-    source = upload.stream if upload and upload.filename else local_logo if local_logo.exists() else None
+    source = local_logo if local_logo.exists() else upload.stream if upload and upload.filename else None
     if source is None:
         errors.append('Logo: anexe o logo da Equatorial Energia para compor o cabeçalho.')
     else:

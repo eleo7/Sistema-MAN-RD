@@ -19,14 +19,16 @@ with sync_playwright() as pw:
     page.screenshot(path=str(output / 'desktop.png'), full_page=True)
     page.locator('#location_p1').fill('Rua 2, Jardim Goiás, Goiânia')
     page.locator('#photo_p1').set_input_files(upload)
-    page.locator('#logo').set_input_files(upload)
+    if page.locator('#logo').count():
+        page.locator('#logo').set_input_files(upload)
     page.locator('#clients').fill('150')
     page.get_by_role('button', name='+ Adicionar mais um ponto').click()
     page.get_by_role('button', name='Gerar ofício').click()
     page.locator('#feedback').filter(has_text='Ponto 2: anexe a foto da evidência.').wait_for()
     assert page.locator('#location_p1').input_value() == 'Rua 2, Jardim Goiás, Goiânia'
     assert page.locator('#photo_p1').evaluate('(el) => el.files.length') == 1
-    assert page.locator('#logo').evaluate('(el) => el.files.length') == 1
+    if page.locator('#logo').count():
+        assert page.locator('#logo').evaluate('(el) => el.files.length') == 1
     page.locator('#location_p2').fill('Avenida T-9, Goiânia')
     page.locator('#photo_p2').set_input_files(upload)
     page.locator('#format').select_option('zip')
