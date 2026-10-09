@@ -173,3 +173,35 @@ def test_project_logo_is_automatic(client, monkeypatch, tmp_path):
         assert len(pdf.pages[0].images) == 2
         word = Document(BytesIO(archive.read('oficio-amma.docx')))
         assert 'graphic' in word.sections[0].header._element.xml
+
+
+@pytest.mark.parametrize('count', [1, 2])
+def test_updated_signature_and_locations(client, count):
+    data = payload(count, 'zip')
+    del data['signer']
+    del data['role']
+    response = client.post('/generate', data=data)
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.data)) as archive:
+        word = Document(BytesIO(archive.read('oficio-amma.docx')))
+        pdf = PdfReader(BytesIO(archive.read('oficio-amma.pdf')))
+    word_text = '\n'.join(p.text for p in word.paragraphs)
+    pdf_text = '\n'.join(p.extract_text() for p in pdf.pages)
+    for text in [word_text, pdf_text]:
+        normalized = ' '.join(text.split())
+        assert 'processo de supressão de Palmeira Imperial' in normalized
+        assert 'supressão de uma' not in normalized
+        assert 'THIAGO DUTRA SILVA' in normalized
+        assert 'ENGENHEIRO AGRÔNOMO E TECNÓL. EM GEOPROCESSAMENTO' in normalized
+        assert 'CREA: Nº 17219/D-GO' in normalized
+        assert 'COORDENADOR DE MEIO AMBIENTE E RESPONSÁVEL TÉCNICO' in normalized
+        if count > 1:
+            assert 'nas seguintes localizações:' in normalized
+            assert 'Ponto 1 — Rua 1' in normalized
+            assert 'Ponto 2 — Rua 2' in normalized
+        else:
+            assert 'na seguinte localização:' in normalized
+    signature = next(p for p in word.paragraphs if p.text == 'THIAGO DUTRA SILVA')
+    assert 'w:pBdr' in signature._p.xml
+    assert signature.runs[0].bold
+    assert signature.paragraph_format.keep_with_next

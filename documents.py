@@ -8,13 +8,14 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PDFImage, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PDFImage, KeepTogether, HRFlowable
 
 RECIPIENT = 'Exma. Sra. Dra. Zilma Percussor'
 RECIPIENT_ROLE = 'Presidente da Agência Municipal do Meio Ambiente'
@@ -36,7 +37,6 @@ if (FONT_DIR / 'times.ttf').exists() and (FONT_DIR / 'timesbd.ttf').exists():
 
 
 def content(data):
-    location = '; '.join(p['location'] for p in data['points'])
     body = ('A EQUATORIAL GOIÁS DISTRIBUIDORA DE ENERGIA S.A., ("EQUATORIAL ENERGIA") empresa prestadora de serviços de distribuição de energia elétrica, inscrita no CNPJ/MF sob o nº 01.543.032/0001-04, com sede na Rua 2, Quadra A-37, nº 505, Edifício Gileno Godói, Bairro Jardim Goiás, Município de Goiânia, Estado de Goiás, CEP 74.805-180, vem, mui respeitosamente, através deste, solicitar apoio no processo de ')
     blocks = []
     if data['number']:
@@ -45,12 +45,21 @@ def content(data):
         ('right', [(data['date_text'], False)]),
         ('recipient', [(RECIPIENT, True), ('\n' + RECIPIENT_ROLE, False)]),
         ('left', [(SALUTATION, False)]),
-        ('justify', [(body, False), (data['excerpt'], True), (' que está localizada ', False), (location, True), ('.', False)]),
     ])
+    if len(data['points']) == 1:
+        blocks.append(('justify', [(body, False), (data['excerpt'], True), (' na seguinte localização: ', False), (data['points'][0]['location'], True), ('.', False)]))
+    else:
+        blocks.append(('justify', [(body, False), (data['excerpt'], True), (' nas seguintes localizações:', False)]))
+        for i, point in enumerate(data['points'], 1):
+            blocks.append(('left', [(f'Ponto {i} — ', True), (point['location'], False)]))
     if data['clients']:
         blocks.append(('justify', [('Ressalta-se que a presente intervenção beneficiará diretamente uma quantidade média de ', False), (data['clients'], True), (' clientes da região, mitigando o risco iminente de descontinuidade no fornecimento de energia elétrica.', False)]))
     blocks.append(('left', [(EVIDENCE, False)]))
     return blocks
+
+
+def signature_lines(data):
+    return [data['signer'], data['qualification'], data['registration'], data['role']]
 
 
 def labels(index, count):
@@ -80,7 +89,10 @@ def generate_pdf(data):
         w, h = image_size(point['photo'], 330, 135)
         photo = PDFImage(BytesIO(point['photo']), width=w, height=h)
         story.append(KeepTogether([photo, Spacer(1, 3), Paragraph(escape(legend), caption)]))
-    story.append(KeepTogether([Paragraph('Atenciosamente,', styles['left']), Spacer(1, 8), Paragraph(markup([(data['signer'], True)]), styles['center']), Paragraph(escape(data['role']), styles['center'])]))
+    signature_style = ParagraphStyle('signature', parent=styles['center'], fontSize=10, leading=15, spaceAfter=0)
+    signature = [Paragraph('Atenciosamente,', styles['left']), Spacer(1, 20), HRFlowable(width='85%', thickness=0.6, color='#555555', spaceAfter=4)]
+    signature.extend(Paragraph(markup([(line, True)]), signature_style) for line in signature_lines(data))
+    story.append(KeepTogether(signature))
 
     def page(canvas, _doc):
         canvas.saveState()
@@ -151,13 +163,27 @@ def generate_docx(data):
         p.runs[0].font.size = Pt(9)
     p = doc.add_paragraph('Atenciosamente,')
     p.paragraph_format.keep_with_next = True
-    p.paragraph_format.space_after = Pt(14)
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.keep_with_next = True
-    p.add_run(data['signer']).bold = True
-    p = doc.add_paragraph(data['role'])
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_after = Pt(26)
+    lines = signature_lines(data)
+    for index, line in enumerate(lines):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = 1.5
+        p.paragraph_format.keep_with_next = index < len(lines) - 1
+        p.paragraph_format.keep_together = True
+        run = p.add_run(line)
+        run.bold = True
+        run.font.size = Pt(10)
+        if index == 0:
+            borders = OxmlElement('w:pBdr')
+            top = OxmlElement('w:top')
+            for key, value in [('val', 'single'), ('sz', '5'), ('space', '4'), ('color', '555555')]:
+                top.set(qn('w:' + key), value)
+            borders.append(top)
+            p._p.get_or_add_pPr().append(borders)
+            p.paragraph_format.left_indent = Cm(1.27)
+            p.paragraph_format.right_indent = Cm(1.27)
     doc.core_properties.title = 'Ofício AMMA'
     doc.core_properties.author = data['signer']
     output = BytesIO()

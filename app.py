@@ -16,7 +16,7 @@ ROOT = Path(__file__).parent
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 45 * 1024 * 1024
 MODELS = {
-    'palmeira': 'supressão de uma Palmeira Imperial',
+    'palmeira': 'supressão de Palmeira Imperial',
     'arvore': 'Supressão de Árvore: com risco de queda ou contato com rede elétrica de distribuição',
 }
 MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -59,8 +59,10 @@ def read_data():
     data = {
         'number': field('number', 'Número do ofício', limit=80),
         'city': field('city', 'Cidade', 'Goiânia', True, 100),
-        'signer': field('signer', 'Signatário', 'Cesar Augusto Guarilha', True),
-        'role': field('role', 'Cargo', 'Gerente de Manutenção e Automação RD Centro', True),
+        'signer': field('signer', 'Signatário', 'THIAGO DUTRA SILVA', True),
+        'role': field('role', 'Cargo', 'COORDENADOR DE MEIO AMBIENTE E RESPONSÁVEL TÉCNICO', True),
+        'qualification': field('qualification', 'Formação', 'ENGENHEIRO AGRÔNOMO E TECNÓL. EM GEOPROCESSAMENTO', True),
+        'registration': field('registration', 'Registro profissional', 'CREA: Nº 17219/D-GO', True, 100),
         'clients': field('clients', 'Clientes beneficiados', limit=12),
         'format': field('format', 'Formato', 'pdf'),
         'model': field('model', 'Modelo', 'palmeira'),
