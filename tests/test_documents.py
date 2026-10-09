@@ -232,3 +232,27 @@ def test_optional_signature_fields(client, omit):
     assert data['role'] in text
     assert 'CREA:' not in text
     assert 'ENGENHEIRO AGRÔNOMO' not in text
+
+
+@pytest.mark.parametrize('count', [1, 7])
+def test_signature_at_page_bottom(client, count):
+    from docx.oxml.ns import qn
+    response = client.post('/generate', data=payload(count, 'zip'))
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.data)) as archive:
+        pdf = PdfReader(BytesIO(archive.read('oficio-amma.pdf')))
+        word = Document(BytesIO(archive.read('oficio-amma.docx')))
+    positions = []
+    def visit(text, cm, tm, font, size):
+        if 'Gerente de Manutenção' in text:
+            positions.append(cm[5] + tm[5] * cm[3])
+    pdf.pages[-1].extract_text(visitor_text=visit)
+    assert positions and all(65 <= y <= 90 for y in positions)
+    for page in pdf.pages[:-1]:
+        assert 'Gerente de Manutenção' not in page.extract_text()
+    closing = next(i for i, p in enumerate(word.paragraphs) if p.text == 'Atenciosamente,')
+    for paragraph in word.paragraphs[closing:]:
+        frame = paragraph._p.pPr.find(qn('w:framePr'))
+        assert frame is not None
+        assert frame.get(qn('w:yAlign')) == 'bottom'
+        assert frame.get(qn('w:vAnchor')) == 'margin'

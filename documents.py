@@ -15,7 +15,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PDFImage, KeepTogether, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PDFImage, KeepTogether, HRFlowable, Flowable, Table
 
 RECIPIENT = 'Exma. Sra. Dra. Zilma Percussor'
 RECIPIENT_ROLE = 'Presidente da Agência Municipal do Meio Ambiente'
@@ -75,6 +75,27 @@ def image_size(blob, max_width, max_height):
     return w * scale, h * scale
 
 
+class BottomSignature(Flowable):
+    """Reserve signature space, then fill the remaining frame down to its bottom."""
+    def __init__(self, flowables):
+        super().__init__()
+        self.flowables = flowables
+
+    def wrap(self, width, height):
+        self.table = Table([[self.flowables]], colWidths=[width], style=[
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ])
+        _, required = self.table.wrap(width, height)
+        self.width, self.height = width, max(required, height)
+        return self.width, self.height
+
+    def draw(self):
+        self.table.drawOn(self.canv, 0, 0)
+
+
 def generate_pdf(data):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=57, rightMargin=57, topMargin=76, bottomMargin=65, title='Ofício AMMA', author=data['signer'])
@@ -94,7 +115,7 @@ def generate_pdf(data):
     signature_style = ParagraphStyle('signature', parent=styles['center'], fontSize=10, leading=15, spaceAfter=0)
     signature = [Paragraph('Atenciosamente,', styles['left']), Spacer(1, SIGNATURE_GAP_CM * POINTS_PER_CM), HRFlowable(width='85%', thickness=0.6, color='#555555', spaceAfter=4)]
     signature.extend(Paragraph(markup([(line, True)]), signature_style) for line in signature_lines(data))
-    story.append(KeepTogether(signature))
+    story.append(BottomSignature(signature))
 
     def page(canvas, _doc):
         canvas.saveState()
@@ -164,11 +185,13 @@ def generate_docx(data):
         p.paragraph_format.line_spacing = 1.5
         p.runs[0].font.size = Pt(9)
     p = doc.add_paragraph('Atenciosamente,')
+    signature_paragraphs = [p]
     p.paragraph_format.keep_with_next = True
     p.paragraph_format.space_after = Pt(6 + SIGNATURE_GAP_CM * POINTS_PER_CM)
     lines = signature_lines(data)
     for index, line in enumerate(lines):
         p = doc.add_paragraph()
+        signature_paragraphs.append(p)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_after = Pt(0)
         p.paragraph_format.line_spacing = 1.5
@@ -186,6 +209,16 @@ def generate_docx(data):
             p._p.get_or_add_pPr().append(borders)
             p.paragraph_format.left_indent = Cm(1.27)
             p.paragraph_format.right_indent = Cm(1.27)
+    # Identical frame properties keep these paragraphs in a single editable
+    # text frame, anchored at the bottom of the last page's body area.
+    for paragraph in signature_paragraphs:
+        frame = OxmlElement('w:framePr')
+        for key, value in [('w', str(round((section.page_width - section.left_margin - section.right_margin) / 635))),
+                           ('hAnchor', 'margin'), ('vAnchor', 'margin'),
+                           ('xAlign', 'center'), ('yAlign', 'bottom'),
+                           ('wrap', 'around'), ('vSpace', '0'), ('hSpace', '0')]:
+            frame.set(qn('w:' + key), value)
+        paragraph._p.get_or_add_pPr().append(frame)
     doc.core_properties.title = 'Ofício AMMA'
     doc.core_properties.author = data['signer']
     output = BytesIO()
