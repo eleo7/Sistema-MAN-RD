@@ -24,6 +24,9 @@ EVIDENCE = 'Abaixo segue as informações de localização e evidências fotogr�
 COMPANY = 'EQUATORIAL ENERGIA GOIÁS'
 ADDRESS = 'Rua 2, Quadra A-37, Nº 651. Jardim Goiás – Goiânia - GO. CEP: 74805-108 - Fone: (62) 3623-1101'
 WEBSITE = 'www.equatorialenergia.com.br'
+PHOTO_WIDTH_CM = 14.5
+PHOTO_HEIGHT_CM = 6
+POINTS_PER_CM = 72 / 2.54
 FONT_DIR = Path(__file__).parent / 'assets' / 'fonts'
 PDF_FONT = 'LiberationSerif'
 pdfmetrics.registerFont(TTFont(PDF_FONT, str(FONT_DIR / 'LiberationSerif-Regular.ttf')))
@@ -84,7 +87,7 @@ def generate_pdf(data):
     for i, point in enumerate(data['points'], 1):
         label, legend = labels(i, len(data['points']))
         story.append(Paragraph(markup([(label + ' ', True), (point['location'], False)]), styles['left']))
-        w, h = image_size(point['photo'], 330, 135)
+        w, h = image_size(point['photo'], PHOTO_WIDTH_CM * POINTS_PER_CM, PHOTO_HEIGHT_CM * POINTS_PER_CM)
         photo = PDFImage(BytesIO(point['photo']), width=w, height=h)
         story.append(KeepTogether([photo, Spacer(1, 3), Paragraph(escape(legend), caption)]))
     signature_style = ParagraphStyle('signature', parent=styles['center'], fontSize=10, leading=15, spaceAfter=0)
@@ -153,7 +156,7 @@ def generate_docx(data):
         p.paragraph_format.space_after = Pt(0)
         p.paragraph_format.line_spacing = 1
         p.paragraph_format.keep_with_next = True
-        w, h = image_size(point['photo'], 11.64, 4.76)
+        w, h = image_size(point['photo'], PHOTO_WIDTH_CM, PHOTO_HEIGHT_CM)
         p.add_run().add_picture(BytesIO(point['photo']), width=Cm(w), height=Cm(h))
         p = doc.add_paragraph(legend)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
